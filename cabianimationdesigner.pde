@@ -2,7 +2,7 @@
 // Written by Michael Schade, (c)2013 
 import java.util.*;  
 import java.text.SimpleDateFormat;
-// get data from http://mvjantzen.com/cabi/cabixmlbuild.php
+// station data from http://mvjantzen.com/cabi/cabixmlbuild.php stored in data/cabi.csv
 // add White House manually: 38.896494, -77.038947, 31210 
 float minLng;  // left
 float maxLng;  // right
@@ -13,15 +13,8 @@ int sheight;
 int secondsPerFrame;  
 int tickCount = 0;
 int histogramWidth;
-String movieTitle; 
-int[] into; 
-int[] within; 
-int[] outof; 
-PImage bg;
-color c1;  
-color c1t;
-color c2;  
-color c2t;
+String movieTitle;  
+PImage bg; 
 List<CaBiTrip> validTrips; 
 int maxBusiest = 0;
 int[][] tripRiders;
@@ -30,15 +23,15 @@ int mostRidersPerStation;
 int maxRidersPerRoute = 0;
 int displayMethod; 
 static final int CHARCOAL = 0;
-static final int CLUSTER = 1;
-static final int RIDERTYPE = 2;
-static final int BALANCES = 3;
-static final int SWEEP = 4;
-static final int BIKEPATH = 5;
+static final int RIDERTYPE = 1;
+static final int BALANCES = 2;
+static final int SWEEP = 3;
+static final int BIKEPATH = 4;
 int rideTypes;
 static final int CASUAL_REGISTERED = 0;
 static final int WEEKDAY_WEEKEND = 1;
 static final int JURISDICTION = 2;
+static final int CLUSTER = 3;
 float[][] tripControlX;
 float[][] tripControlY;
 String[][] paths; 
@@ -49,17 +42,17 @@ int[][] balances;
 int[] balanceSum;
 String dataTitle;
 String subTitle;
-int SECONDSperDAY = 60*60*24;
-//BikeDirections[] stationdirections;
+static final int SECONDSperDAY = 60*60*24;
 cabiStation[] cabiStations;
 statKey[] statistics; 
   
 public class statKey { 
+  // defines a category - shown as a bar in the key as well as the corresponding segment in the histogram
   public String label;
   public color fill;
   public color stroke;
-  public color opaque;
-  public int count; 
+  public color opaque;  // same as fill but without any transparency
+  public int count;  // the number of riders matching this category currently on display
   public int[] histogram;  // each element is the value of "count" in that point in time
   public statKey(String l, color f, color s) {
     label = l;
@@ -71,6 +64,7 @@ public class statKey {
   }
 
 public class BikeDirections { 
+  // all the information needed to draw a path between two CaBi stations
   public String start;
   public String end;
   public float[] xPoints;
@@ -107,6 +101,7 @@ public class BikeDirections {
   }
   
 public class CaBiBike { 
+  // a single Capital Bikeshare bike
   public String bikeID;
   int trips;
   public CaBiBike(String ID) {
@@ -116,6 +111,7 @@ public class CaBiBike {
   }
 
 public class CaBiTrip { 
+  // object for each row in the trip-history open data
   public int bikeoutStation;  // an index to the array which have info for each station
   public int bikeinStation;
   public int bikeoutTime; 
@@ -181,11 +177,20 @@ public class CaBiTrip {
     isWeekday = bikeoutDayTime.get(Calendar.DAY_OF_WEEK) != Calendar.SATURDAY && bikeoutDayTime.get(Calendar.DAY_OF_WEEK) != Calendar.SUNDAY;
     if (rideTypes == CASUAL_REGISTERED)    {if (isRegistered) category = 1; else category = 0;}
     else if (rideTypes == WEEKDAY_WEEKEND) {if (isWeekday)    category = 1; else category = 0;}
-    else {if (isMaryland(bikeout)) {category = 3;} else if (isAlexandria(bikeout)) {category = 2;} else if (isArlington(bikeout)) {category = 1;} else {category = 0;}}
+    else if (rideTypes == JURISDICTION)    {
+      if (isMaryland(bikeout)) {category = 3;} else if (isAlexandria(bikeout)) {category = 2;} else if (isArlington(bikeout)) {category = 1;} else {category = 0;}
+      }
+    else {  // == CLUSTER
+      if (cabiStations[bikeoutStation].inFocus && cabiStations[bikeinStation].inFocus) {category = 1;}
+      else if (cabiStations[bikeoutStation].inFocus)                                   {category = 2;}
+      else                                                                             {category = 0;} 
+      println("X: " + category);
+      }
     }     
   }
   
 public class cabiCircle implements Comparable<cabiCircle> { 
+  // representation of a CaBi rider on the screen
   public float x, y;
   public int radius;  
   public Boolean selected;
@@ -203,12 +208,13 @@ public class cabiCircle implements Comparable<cabiCircle> {
   } 
   
 public class cabiStation { 
+  // a single Capital Bikeshare station
   public float lat, lng;  
   public float x, y;
   public String name;  
   public String id;  
-  Boolean inUse;
-  Boolean inFocus;
+  Boolean inUse;  // are ridings currently travelling to or from this station?
+  Boolean inFocus;  // does the current dataset include this station?
   List<BikeDirections> directions;  // directions from this station to other stations
   public cabiStation(float latitude, float longitude, String n, String i) {
     lat = latitude;
@@ -222,6 +228,7 @@ public class cabiStation {
   } 
 
 void initSystem(String system) {
+  // read in initial data
   String lines[] = loadStrings(system);
   cabiStations = new cabiStation[lines.length];
   for (int i = 0; i < lines.length; i++) {
@@ -238,14 +245,7 @@ void initDirections() {
       }
     } 
   Table table;
-  table = loadTable("/Users/michael/mvjantzen.com/cabi/directions/stationdirections.csv", "header, csv");
-  /*
-  stationdirections = new BikeDirections[table.getRowCount()];
-  for (int i = 0; i < table.getRowCount(); i++) { 
-    TableRow row = table.getRow(i);
-    stationdirections[i] = new BikeDirections(row.getString("from"), row.getString("to"), row.getString("points"));
-    }
-  */
+  table = loadTable("/Users/michael/mvjantzen.com/cabi/directions/stationdirections.csv", "header, csv"); 
   for (int i = 0; i < table.getRowCount(); i++) { 
     TableRow row = table.getRow(i);
     String fromId = row.getString("from");
@@ -422,7 +422,7 @@ Boolean isGreaterCrystalCity(String s) {
   } 
 
 void drawKey(String timestamp) {
-  float scale = 400;  // histogram height
+  float scale = 700;  // histogram height
   textSize(12); 
   if (lightmap)
     fill(0,0,0);
@@ -436,7 +436,7 @@ void drawKey(String timestamp) {
   popMatrix();   
   fill(255,0,0); 
   int TitleY; 
-  if (displayMethod == CLUSTER || displayMethod == SWEEP)
+  if (displayMethod == SWEEP)
     TitleY = sheight - 53; 
   else if (displayMethod == RIDERTYPE)
     TitleY = sheight - 16*statistics.length - 6; 
@@ -491,31 +491,16 @@ void drawKey(String timestamp) {
     } 
   textSize(12);
   textAlign(CENTER);
-  strokeText(timestamp, leftEdge + tickCount, sheight - 3);
-  if (displayMethod == RIDERTYPE && false) { 
-    // now draw the key
-    textAlign(RIGHT); 
-    strokeText(str(statistics[0].histogram[tickCount - 1]), swidth - 86, sheight - 20); 
-    strokeText(str(statistics[1].histogram[tickCount - 1]), swidth - 86, sheight - 4);  // should be from current data, not histogram - FIX
-    noStroke();
-    fill(statistics[0].fill); 
-    rect(swidth - 84, sheight - 32, 70, 14, 3);
-    fill(statistics[1].fill); 
-    rect(swidth - 84, sheight - 17, 70, 14, 3);
-    textAlign(CENTER); 
-    fill(0); 
-    text(statistics[0].label, swidth - 49, sheight - 21); 
-    text(statistics[1].label, swidth - 49, sheight - 5);   
-    }
-  else if (displayMethod == SWEEP) { 
+  strokeText(timestamp, leftEdge + tickCount, sheight - 3); 
+  if (displayMethod == SWEEP) { 
     // now draw the key
     textAlign(RIGHT); 
     strokeText(str(statistics[1].histogram[tickCount - 1]), swidth - 86, sheight - 19); // should be from current data, not histogram - FIX
     strokeText(str(statistics[0].histogram[tickCount - 1]), swidth - 86, sheight - 35); 
-    fill(c1); 
+    fill(statistics[0].fill);  // replace "c1" - fix!
     noStroke();
     rect(swidth - 84, sheight - 32, 70, 14, 3); 
-    fill(c2); 
+    fill(statistics[1].fill);  // fix
     rect(swidth - 84, sheight - 47, 70, 14, 3);
     fill(255); 
     textAlign(CENTER);
@@ -842,15 +827,7 @@ List<String> centerForTotalHealth() {
   list.add("31616"); 
   list.add("31623"); 
   return list;
-  }
-  
-List<String> q7th() {
-  List<String> list = new ArrayList<String>();
-  list.add("31109"); 
-  list.add("31245"); 
-  list.add("31509"); 
-  return list;
-  }
+  } 
   
 List<String> gmu() {
   List<String> list = new ArrayList<String>();
@@ -892,16 +869,7 @@ List<String> jefferson() {
   List<String> list = new ArrayList<String>(cabiStations.length);
   list.add("31249");  
   return list;
-  }
-  
-List<String> virg20th() {
-  List<String> list = new ArrayList<String>(cabiStations.length);
-  list.add("31204");  
-  list.add("31206");  
-  list.add("31220");  
-  list.add("31259");  
-  return list;
-  }
+  } 
   
 List<String> rosslyn() {
   List<String> list = new ArrayList<String>(cabiStations.length);
@@ -956,25 +924,12 @@ void drawRoutes() {
           if (displayMethod == CHARCOAL) {
             strokeWeight(3); 
             stroke(0,0,0, min(255, floor(256.0*5*totalRiders/192)));  // FIX: pre-calculate max val
-            }
-          else if (displayMethod == CLUSTER) { 
-            strokeWeight(totalRiders); 
-            if (cabiStations[i].inFocus && cabiStations[j].inFocus) {  // trips is between two valid stations
-              stroke(statistics[1].stroke);
-              statistics[1].count += totalRiders;
-              }
-            else if (cabiStations[i].inFocus) {
-              stroke(statistics[2].stroke);
-              statistics[2].count += totalRiders;
-              }
-            else {
-              stroke(statistics[0].stroke);
-              statistics[0].count += totalRiders;
-              } 
-            }
+            } 
           else {
             strokeWeight(totalRiders); 
-            stroke(blend(c1t, c2t, (float)tripRidersCas[i][j]/totalRiders));  
+            // need new way to blend multiple colors based on their percentages:
+            //stroke(blend(c1t, c2t, (float)tripRidersCas[i][j]/totalRiders));  
+            stroke(blend(statistics[0].stroke, statistics[1].stroke, (float)tripRidersCas[i][j]/totalRiders));  
             } 
           bezier(cabiStations[i].x, cabiStations[i].y, midx,midy,midx,midy, cabiStations[j].x, cabiStations[j].y); 
           } 
@@ -1002,39 +957,28 @@ void drawRiders(int frame) {
       inTime -= SECONDSperDAY;  
       }
     if (frame >= outTime - 15 && frame <= inTime + 15) {  
-      // determine the color
-      if (displayMethod == CLUSTER) {
-        //if (min(frame, inTime) - outTime < 1800)  // under 30-min time limit, but don't turn red after bikein 
-        if (cabiStations[trip.bikeoutStation].inFocus && cabiStations[trip.bikeinStation].inFocus)  
-          {stroke(statistics[1].stroke); fill(statistics[1].fill); statistics[1].count++;}
-        else if (cabiStations[trip.bikeoutStation].inFocus)  
-          {stroke(statistics[2].stroke); fill(statistics[2].fill); statistics[2].count++;}
-        else  
-          {stroke(statistics[0].stroke); fill(statistics[0].fill); statistics[0].count++;}
+      // determine the color  
+      if (rideTypes == JURISDICTION || rideTypes == CLUSTER) {
+        statistics[trip.category].count++;
+        } 
+      else if (rideTypes == CASUAL_REGISTERED && trip.isRegistered || 
+          rideTypes == WEEKDAY_WEEKEND   && trip.isWeekday) {
+        tripRiders[trip.bikeoutStation][trip.bikeinStation]++;
+        statistics[1].count++;
         }
-      else {  // RIDERTYPE
-        if (rideTypes == JURISDICTION) {
-          statistics[trip.category].count++;
-          } 
-        else if (rideTypes == CASUAL_REGISTERED && trip.isRegistered || 
-            rideTypes == WEEKDAY_WEEKEND   && trip.isWeekday) {
-          tripRiders[trip.bikeoutStation][trip.bikeinStation]++;
-          statistics[1].count++;
-          }
-        else {
-          tripRidersCas[trip.bikeoutStation][trip.bikeinStation]++;
-          statistics[0].count++;
-          }
+      else {
+        tripRidersCas[trip.bikeoutStation][trip.bikeinStation]++;
+        statistics[0].count++;
+        }
         /*
         if (min(frame, inTime) - outTime < 1800)  // under 30-min time limit, but don't turn red after bikein
           noFill();
           */
-        fill(statistics[trip.category].stroke);
-        stroke(statistics[trip.category].stroke);
-        } 
+      fill(statistics[trip.category].fill); 
+      stroke(statistics[trip.category].stroke);
       float scale = (float)(frame - outTime)/(float)(inTime - outTime);  
-      drawPointAlongPath(trip, scale, 3); 
-      }
+      drawPointAlongPath(trip, scale, 5); 
+      } 
     }
   }
 
@@ -1047,8 +991,8 @@ void drawPointAlongPath(CaBiTrip trip, float scale, int size) {
   /*
   float midx = tripControlX[bikeoutStation][bikeinStation];
   float midy = tripControlY[bikeoutStation][bikeinStation];
-  float x = bezierPoint(stationX[bikeoutStation], midx, midx, stationX[bikeinStation], scale);
-  float y = bezierPoint(stationY[bikeoutStation], midy, midy, stationY[bikeinStation], scale);
+  float x = bezierPoint(cabiStations[bikeoutStation].x, midx, midx, cabiStations[bikeinStation].x, scale);
+  float y = bezierPoint(cabiStations[bikeoutStation].y, midy, midy, cabiStations[bikeinStation].y, scale);
   ellipse(x, y, size, size);
   */
   if (directions != null) {  // directions exist 
@@ -1157,7 +1101,7 @@ void animate24Hours() {
       }
     background(bg);
     findBusiestRoutes();
-    //drawRoutes();  // draw bezier curves
+    drawRoutes();  // draw bezier curves
     drawStations(0);  // draw stations 
     drawRiders(frame);
     if (floor((float)histogramWidth*frame/lastFrame) >= tickCount && tickCount < histogramWidth - 1) { 
@@ -1551,14 +1495,7 @@ void animateBikePath(String bikeNo) {
     saveFrame(folder + "image-" + nf(imageNo++, 5) + ".png"); 
     currentDate.add(Calendar.SECOND, secondsPerFrame);
     } 
-  }
-
-void setColors(color colorA, color colorB) {  
-  c1 = colorA;  
-  c1t = color(red(colorA), green(colorA), blue(colorA), 102);
-  c2 = colorB;  
-  c2t = color(red(colorB), green(colorB), blue(colorB), 102);
-  }
+  } 
     
 String IDof(String name) { 
   name = name.substring(1, name.length() - 1);
@@ -1591,16 +1528,16 @@ void setup() {
   //convert(); 
   initSystem("cabi.csv");  
   validTrips = new ArrayList<CaBiTrip>(3200000);  // guess number of records
-  displayMethod = RIDERTYPE;  // choose BIKEPATH or CLUSTER or CHARCOAL or RIDERTYPE or BALANCES or SWEEP
-  rideTypes = JURISDICTION;  // if RIDERTYPE, choose CASUAL_REGISTERED or WEEKDAY_WEEKEND or JURISDICTION 
-  if (displayMethod == CLUSTER) {
-    statistics = new statKey[3]; 
-    statistics[0] = new statKey("entering", color(109, 197,  58, 204), color(109, 197,  58, 153));  // green
-    statistics[1] = new statKey("within",   color(246,  93,  85, 204), color(246,  93,  85, 153));  // red  
-    statistics[2] = new statKey("leaving",  color(  8, 170, 245, 204), color  (8, 170, 245, 153));  // blue  
-    }  
-  else {
-    if (rideTypes == CASUAL_REGISTERED) {
+  displayMethod = RIDERTYPE;  // choose BIKEPATH or CHARCOAL or RIDERTYPE or BALANCES or SWEEP
+  rideTypes = CLUSTER;  // if RIDERTYPE, choose CLUSTER or CASUAL_REGISTERED or WEEKDAY_WEEKEND or JURISDICTION 
+  if (displayMethod == RIDERTYPE) { 
+    if (rideTypes == CLUSTER) {
+      statistics = new statKey[3]; 
+      statistics[0] = new statKey("entering", color(109, 197,  58, 204), color(109, 197,  58, 153));  // green
+      statistics[1] = new statKey("within",   color(246,  93,  85, 204), color(246,  93,  85, 153));  // red  
+      statistics[2] = new statKey("leaving",  color(  8, 170, 245, 204), color  (8, 170, 245, 153));  // blue  
+      } 
+    else if (rideTypes == CASUAL_REGISTERED) {
       statistics = new statKey[2]; 
       statistics[0] = new statKey("casual", color(252, 48, 29), color(252, 48, 29, 50));  // CaBi red 
       statistics[1] = new statKey("registered", color(254,204,47), color(254,204,47, 50));  // CaBi yellow  
@@ -1630,7 +1567,7 @@ void setup() {
   setBoundary("greatercrystalcity600x450.png", 38.8390, -77.0805, 38.8689, -77.0291, 600, 450, all(), "Capital Bikeshare");
   setBoundary("caohillne680x510.png", 38.8893, -77.0214, 38.9063, -76.9922, 680, 510, centerForTotalHealth(), "Kaiser Permanente Center for Total Health"); 
   setBoundary("dc-va-600x450.jpg", 38.7990, -77.1604, 38.9591, -76.8861, 600, 450, all(), "Capital Bikeshare");   
-  setBoundary("shaw640x480.png", 38.9050, -77.0357, 38.9210, -77.0082, 640, 480, q7th(), "Wonder Bread Factory"); 
+  setBoundary("shaw640x480.png", 38.9050, -77.0357, 38.9210, -77.0082, 640, 480, all(), "Wonder Bread Factory"); 
   setBoundary("dc-cc450x600.png", 38.8318, -77.0861, 38.9119, -77.0090, 450, 600, all(), "Capital Bikeshare"); 
   setBoundary("dc-core800x600.png", 38.8404, -77.1031, 38.9204, -76.9659, 800, 600, all(), "Capital Bikeshare"); 
   setBoundary("crystalcity480x320.png", 38.8369, -77.0904, 38.8795, -77.0082, 480, 320, greaterCrystalCity(), "Crystal City"); 
@@ -1657,7 +1594,6 @@ void setup() {
   setBoundary("dupont800x600dark.png", 38.8836, -77.0720, 38.9236, -77.0034, 800, 600, dupont(), "Dupont Circle");
   setBoundary("dc-core800x600dark.png", 38.8469, -77.1031, 38.9270, -76.9659, 800, 600, all(), "Capital Bikeshare"); 
   setBoundary("unionstation800x600dark.png", 38.8733, -77.0512, 38.9133, -76.9826, 800, 600, unionstation(), "Union Station");
-  setBoundary("unionstation800x600dark.png", 38.8733, -77.0512, 38.9133, -76.9826, 800, 600, unionstation(), "2nd & G St NE");
   setBoundary("dc800x600dark.png", 38.8360, -77.1717, 38.9960, -76.8974, 800, 600, all(), "Capital Bikeshare");
   setBoundary("dc800x600black.png", 38.8071, -77.1968, 38.9750, -76.9094, 800, 600, all(), "Capital Bikeshare");
   setBoundary("dc800x600zoomblack.png", 38.8741, -77.0740, 38.9181, -76.9984, 800, 600, all(), "Capital Bikeshare");
@@ -1666,7 +1602,7 @@ void setup() {
   setBoundary("nova600x800dark.png", 38.79148, -77.12660, 38.907253, -77.01558, 600, 800, all(), "Northern Virginia");
   setBoundary("region500x750dark.png", 38.78513, -77.23099, 39.18557, -76.88698, 500, 750, all(), "Capital Bikeshare");
   setBoundary("region640x640dark.png", 38.78854, -77.27364, 39.12946, -76.83205, 640, 640, all(), "Capital Bikeshare");
-  setBoundary("arlington600x800dark.png", 38.82716, -77.12663, 38.90723, -76.98892, 800, 600, all(), "Capital Bikeshare");
+  setBoundary("arlington600x800dark.png", 38.82716, -77.12663, 38.90723, -76.98892, 800, 600, arlington(), "Capital Bikeshare");
   lightmap = false;  
   initDirections();
   //setDatasource("/Users/michael/mvjantzen.com/cabi/data/2011-4th-quarter.csv", 4, 7, 2, 5, 9);
@@ -1683,24 +1619,17 @@ void setup() {
   //setDatasource("/Users/michael/mvjantzen.com/cabi/data/2015-Q1-Trips-History-Data.csv", 2, 4, 1, 3, 6);
   //setDatasource("/Users/michael/mvjantzen.com/cabi/data/2015-Q2-Trips-History-Data.csv",       2, 4, 1, 3, 6, 5);
   //setDatasource("/Users/michael/mvjantzen.com/cabi/data/2015-Q3-cabi-trip-history-data.csv", 4, 6, 1, 2, 8, 7);
-  //setDatasource("/Users/michael/mvjantzen.com/cabi/data/2015-Apr-11.csv", 3, 5, 2, 4, 7, 1);
-  setDatasource("/Users/michael/mvjantzen.com/cabi/data/2015.csv", 3, 5, 2, 4, 7, 1);
+  setDatasource("/Users/michael/mvjantzen.com/cabi/data/2015-Apr-11.csv", 3, 5, 2, 4, 7, 1);
+  //setDatasource("/Users/michael/mvjantzen.com/cabi/data/2015.csv", 3, 5, 2, 4, 7, 1);
   dataTitle = "Bike W21852 in 2015";
   dataTitle = "April 11, 2015";
   dataTitle = "2015 trips, colored by origin";
-  println("Date range: " + minDate.getTime() + " to " + maxDate.getTime());
-  if (lightmap)
-    setColors(color(93,110,182), color(201, 62, 103));  
-  else
-    setColors(color(254,204,47), color(252, 48, 29));  // yellow, red 
+  println("Date range: " + minDate.getTime() + " to " + maxDate.getTime()); 
   //getStats();
   histogramWidth = 180; 
   for (int i = 0; i < statistics.length; i++) { 
     statistics[i].histogram = new int[histogramWidth]; 
-    }
-  into = new int[histogramWidth];
-  within = new int[histogramWidth];
-  outof = new int[histogramWidth];
+    } 
   size(swidth, sheight, JAVA2D);
   println("=============================");
   if (displayMethod == SWEEP) {
