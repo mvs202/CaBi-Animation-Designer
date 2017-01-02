@@ -214,7 +214,7 @@ public class CaBiTrip {
       else                                                                             {category = 0;} 
       }
     else if (rideTypes == BIKENO) { 
-      if (bikeNo.equals("W21852")) {category = 0;}
+      if (bikeNo.equals("W22062")) {category = 0;}
       else                         {category = 1;} 
       }
     else if (rideTypes == TRIPDAY) {  // check start day
@@ -707,111 +707,11 @@ void strokeText(String message, int x, int y) {
     fill(255); 
     text(message, x, y); 
     }
-  } 
-
-Boolean gameday(int day) {
-  Boolean[] hasGame = new Boolean[366];
-  for (int i = 0; i < hasGame.length; i++) {
-    hasGame[i] = false;
-    }
-  String[] dates = {
-"4/6/2015",
-"4/8/2015",
-"4/9/2015",
-"4/16/2015",
-"4/17/2015",
-"4/18/2015",
-"4/19/2015",
-"4/21/2015",
-"4/22/2015",
-"4/23/2015",
-"5/4/2015",
-"5/5/2015",
-"5/6/2015",
-"5/8/2015",
-"5/9/2015",
-"5/10/2015",
-"5/19/2015",
-"5/20/2015",
-"5/22/2015",
-"5/23/2015",
-"5/24/2015",
-"6/1/2015",
-"6/2/2015",
-"6/2/2015",
-"6/3/2015",
-"6/4/2015",
-"6/5/2015",
-"6/6/2015",
-"6/7/2015",
-"6/17/2015",
-"6/18/2015",
-"6/19/2015",
-"6/20/2015",
-"6/21/2015",
-"6/23/2015",
-"6/24/2015",
-"6/25/2015",
-"7/3/2015",
-"7/4/2015",
-"7/5/2015",
-"7/6/2015",
-"7/7/2015",
-"7/8/2015",
-"7/17/2015",
-"7/18/2015",
-"7/18/2015",
-"7/19/2015",
-"7/20/2015",
-"7/21/2015",
-"7/22/2015",
-"8/3/2015",
-"8/4/2015",
-"8/5/2015",
-"8/6/2015",
-"8/7/2015",
-"8/8/2015",
-"8/9/2015",
-"8/21/2015",
-"8/22/2015",
-"8/23/2015",
-"8/25/2015",
-"8/26/2015",
-"8/27/2015",
-"8/28/2015",
-"8/29/2015",
-"8/30/2015",
-"9/3/2015",
-"9/4/2015",
-"9/5/2015",
-"9/6/2015",
-"9/7/2015",
-"9/8/2015",
-"9/9/2015",
-"9/17/2015",
-"9/18/2015",
-"9/19/2015",
-"9/20/2015",
-"9/21/2015",
-"9/22/2015",
-"9/23/2015",
-"9/24/2015",
-"9/25/2015",
-"9/26/2015",
-"9/27/2015",
-"9/28/2015"};  
-  for (int i = 0; i < dates.length; i++) {  
-    String[] mdy = split(dates[i], "/");   
-    Calendar calendar = new GregorianCalendar(parseInt(mdy[2]), parseInt(mdy[0]) - 1, parseInt(mdy[1]), 0, 0, 0);
-    hasGame[calendar.get(Calendar.DAY_OF_YEAR)] = true;
-    }
-  return hasGame[day];
   }
-  
+
 void getStats() {
   HashMap<String, Integer> zipCounts = new HashMap<String, Integer>();
   println("calculating stats...");
-  List<CaBiBike> bikeList = new ArrayList<CaBiBike>(2000);  // assume no more than 2000 bikes
   CaBiTrip trip;
   SimpleDateFormat format1 = new SimpleDateFormat("yyyy-MM-dd");
   int toCC = 0;
@@ -831,12 +731,10 @@ void getStats() {
   int[] tripsPerDayOfYear = new int[366];
   int[] tripsPerWeekOfYear = new int[53];
   int[] tripsPerMonth = new int[12];
-  int[] tripsPerDayOfYearBaseball = new int[366]; 
-  int[] tripsPerDayOfYearNonBaseball = new int[366]; 
-  int[] tripsPerStation = new int[cabiStations.length]; 
-  int[] tripsToFromLincolnMemorial = new int[cabiStations.length]; 
-  String[] stringTrips = new String[cabiStations.length]; 
-  int[] casualTripsPerStation = new int[cabiStations.length]; 
+  int[] tripsPerStation = new int[cabiStations.length];
+  int[] tripsToFromLincolnMemorial = new int[cabiStations.length];
+  String[] stringTrips = new String[cabiStations.length];
+  int[] casualTripsPerStation = new int[cabiStations.length];
   int totalTrips = 0;
   int totalCasualTrips = 0;
   int LincolnToJefferson = 0;
@@ -844,8 +742,6 @@ void getStats() {
   Calendar calendar;
   for (int i = 0; i < tripsPerDayOfYear.length; i++) {
     tripsPerDayOfYear[i] = 0;
-    tripsPerDayOfYearBaseball[i] = 0; 
-    tripsPerDayOfYearNonBaseball[i] = 0; 
     }
   for (int i = 0; i < tripsPerMonth.length; i++) {
     tripsPerMonth[i] = 0; 
@@ -925,30 +821,8 @@ void getStats() {
       }
     if (cabiStations[trip.bikeinStation].id.equals("31258")) {
       tripsToFromLincolnMemorial[trip.bikeoutStation]++;
-      }
-    if (cabiStations[trip.bikeoutStation].id.equals("31209") || 
-        cabiStations[trip.bikeoutStation].id.equals("31634") || 
-        cabiStations[trip.bikeoutStation].id.equals("31208")) {
-      if (gameday(bikeoutDayOfYear)) {tripsPerDayOfYearBaseball[bikeoutDayOfYear - 1]++;}
-      else                           {tripsPerDayOfYearNonBaseball[bikeoutDayOfYear - 1]++;}
-      }   
-    if (cabiStations[trip.bikeinStation].id.equals("31209") || 
-        cabiStations[trip.bikeinStation].id.equals("31634") || 
-        cabiStations[trip.bikeinStation].id.equals("31208")) {
-      if (gameday(bikeinDayOfYear)) {tripsPerDayOfYearBaseball[bikeinDayOfYear - 1]++;}
-      else                          {tripsPerDayOfYearNonBaseball[bikeinDayOfYear - 1]++;}
-      }   
+      } 
     
-    Boolean found = false;
-    for (int i = 0; i < bikeList.size(); i++) {
-      if (bikeList.get(i).bikeID.equals(trip.bikeNo)) {
-        bikeList.get(i).trips++;
-        found = true;
-        }
-      }
-    if (!found) {
-      bikeList.add(new CaBiBike(trip.bikeNo));
-      }
     if (cabiStations[trip.bikeoutStation].id.equals("31258") && cabiStations[trip.bikeinStation].id.equals("31249")) {LincolnToJefferson++;}
     if (cabiStations[trip.bikeoutStation].id.equals("31249") && cabiStations[trip.bikeinStation].id.equals("31258")) {JeffersonToLincoln++;}
     if (isGreaterCrystalCity(cabiStations[trip.bikeoutStation].id)) {
@@ -993,7 +867,6 @@ void getStats() {
     working.set(2016, 0, 1);  // Jan 1, 2016
     working.add(Calendar.DAY_OF_YEAR, i); 
     //println(String.format("%07d", tripsPerDayOfYear[i]) + ": " + format1.format(working.getTime()));
-    //println(format1.format(working.getTime()) + "," + tripsPerDayOfYearBaseball[i] + "," + tripsPerDayOfYearNonBaseball[i]);
     }
     /*
   println("increase in trips per station:");
@@ -1058,23 +931,82 @@ void getStats() {
   println((totalTrips - totalCasualTrips) + " registered trips (" + 100.0*(totalTrips - totalCasualTrips)/totalTrips + "%)");
   println(totalCasualTrips + " casual trips (" + 100.0*totalCasualTrips/totalTrips + "%)");
   println(totalTrips + " total trips");
-  int maxtrips = 0;
-  String busyBike = "";
-  println("***********************************");
-  for (int i = 0; i < bikeList.size(); i++) {
-    //if (bikeList.get(i).bikeID.equals("W20167"))
-    //  println(bikeList.get(i).trips + " - " + bikeList.get(i).bikeID);
-    if (!bikeList.get(i).bikeID.equals("W21735") && !bikeList.get(i).bikeID.equals("W21705") && !bikeList.get(i).bikeID.equals("W21852") && !bikeList.get(i).bikeID.equals("W21953") && bikeList.get(i).trips > maxtrips) {
-      maxtrips = bikeList.get(i).trips;
-      busyBike = bikeList.get(i).bikeID;
-      }
-    }
-  println("***********************************");
-  println("busy bike is " + busyBike + ", " + maxtrips + "trips");
   println("***********************************");
   for (String string : zipCounts.keySet()) {
     //println(zipCounts.get(string) + " :: " + string);
     }
+  getBusyBikeStats();
+  }
+  
+void getBusyBikeStats() {
+  // Calculate busy bike:
+  CaBiTrip trip;
+  List<CaBiBike> bikeList = new ArrayList<CaBiBike>(2000);  // assume no more than 2000 bikes
+  for (int t = 0; t < validTrips.size(); t++) {
+    trip = validTrips.get(t); 
+    Boolean found = false;
+    for (int i = 0; i < bikeList.size(); i++) {
+      if (bikeList.get(i).bikeID.equals(trip.bikeNo)) {
+        bikeList.get(i).trips++;
+        found = true;
+        }
+      }
+    if (!found) {
+      bikeList.add(new CaBiBike(trip.bikeNo));
+      }
+    }
+  String busyBike = "";
+  int busyBikeTrips = 0;
+  for (int i = 0; i < bikeList.size(); i++) { 
+    //if (!bikeList.get(i).bikeID.equals("1stplacebike")) {
+      if (bikeList.get(i).trips > busyBikeTrips) {
+        busyBike = bikeList.get(i).bikeID;
+        busyBikeTrips = bikeList.get(i).trips;
+        }
+     // }
+    }
+  println("***********************************");
+  println("busy bike is " + busyBike + ", with " + busyBikeTrips + " trips");
+  int northernmostStation = -1;
+  int southernmostStation = -1;
+  int westernmostStation = -1;
+  int easternmostStation = -1;
+  int[] busyBikeTripsPerStation = new int[cabiStations.length];
+  for (int i = 0; i < busyBikeTripsPerStation.length; i++) {
+    busyBikeTripsPerStation[i] = 0;
+    }
+  for (int t = 0; t < validTrips.size(); t++) {
+    trip = validTrips.get(t); 
+    if (busyBike.equals(trip.bikeNo)) {
+      int bikeIn = trip.bikeinStation;
+      if (northernmostStation < 0 || cabiStations[bikeIn].lat > cabiStations[northernmostStation].lat) {
+        northernmostStation = bikeIn;
+        }
+      if (southernmostStation < 0 || cabiStations[bikeIn].lat < cabiStations[southernmostStation].lat) {
+        southernmostStation = bikeIn;
+        } 
+      if (westernmostStation < 0 || cabiStations[bikeIn].lng < cabiStations[westernmostStation].lng) {
+        westernmostStation = bikeIn;
+        } 
+      if (easternmostStation < 0 || cabiStations[bikeIn].lng > cabiStations[easternmostStation].lng) {
+        easternmostStation = bikeIn;
+        }  
+      busyBikeTripsPerStation[bikeIn]++;
+      }
+    }
+  println("Northern-most station is " + cabiStations[northernmostStation].name);
+  println("Southern-most station is " + cabiStations[southernmostStation].name);
+  println("Western-most station is " + cabiStations[westernmostStation].name);
+  println("Eastern-most station is " + cabiStations[easternmostStation].name);
+  String[] stringTrips = new String[cabiStations.length]; 
+  for (int i = 0; i < busyBikeTripsPerStation.length; i++) {
+    stringTrips[i] = String.format("%7d", busyBikeTripsPerStation[i]) + "," + cabiStations[i].name + " (" + cabiStations[i].jurisdiction + ")"; 
+    }
+  Arrays.sort(stringTrips);
+  for (int i = stringTrips.length - 1; i >= 0; i--) {
+    println(stringTrips[i]);
+    }
+  println("***********************************");
   }
 
 void setBoundary(String background, float south, float west, float north, float east, int w, int h, List<String> validStations, String s) {  
@@ -1981,7 +1913,7 @@ void setup() {
   validTrips = new ArrayList<CaBiTrip>(3200000);  // guess number of records
   displayMethod = RIDERTYPE;  // choose BIKEPATH or CHARCOAL or RIDERTYPE or BALANCES or SWEEP
   // if displayMethod == RIDERTYPE, choose a value for rideTypes:
-  rideTypes = JURISDICTION;  // CLUSTER, CASUAL_REGISTERED, WEEKDAY_WEEKEND, JURISDICTION, BIKENO, TRIPDAY, ALL_TYPES
+  rideTypes = BIKENO;  // CLUSTER, CASUAL_REGISTERED, WEEKDAY_WEEKEND, JURISDICTION, BIKENO, TRIPDAY, ALL_TYPES
   if (displayMethod == RIDERTYPE) { 
     if (rideTypes == CLUSTER) {
       statistics = new statKey[3]; 
@@ -2096,23 +2028,23 @@ void setup() {
   setBoundary("dc800x600black.png", 38.8071, -77.1968, 38.9750, -76.9094, 800, 600, all(), "Capital Bikeshare");
   setBoundary("lowercloseup640x480dark.png", 38.79584, -77.22611, 39.00131, -76.87523, 640, 480, all(), "Capital Bikeshare");  
   lightmap = false;
-  initDirections(); 
+  //initDirections();  // be sure to UNcomment unless you're only getting stats
   //setDatasource("/Users/michael/mvjantzen.com/cabi/data/2015-Q1-Trips-History-Data.csv");
   //setDatasource("/Users/michael/mvjantzen.com/cabi/data/2015-Q2-Trips-History-Data.csv");
   //setDatasource("/Users/michael/mvjantzen.com/cabi/data/2015-Q3-cabi-trip-history-data.csv"); 
   //setDatasource("/Users/michael/mvjantzen.com/cabi/data/2015-Q4-Trips-History-Data.csv");
-  //setDatasource("/Users/michael/mvjantzen.com/cabi/data/2016-Q1-Trips-History-Data.csv"); 
-  //setDatasource("/Users/michael/mvjantzen.com/cabi/data/2016-Q2-Trips-History-Data.csv"); 
-  //setDatasource("/Users/michael/mvjantzen.com/cabi/data/2016-Q3-Trips-History-Data-1.csv"); 
-  setDatasource("/Users/michael/mvjantzen.com/cabi/data/2016-Q3-Trips-History-Data-2.csv"); 
-  //setDatasource("/Users/michael/mvjantzen.com/cabi/data/REIweekend.csv"); 
+  setDatasource("/Users/michael/mvjantzen.com/cabi/data/2016-Q1-Trips-History-Data.csv");
+  setDatasource("/Users/michael/mvjantzen.com/cabi/data/2016-Q2-Trips-History-Data.csv");
+  setDatasource("/Users/michael/mvjantzen.com/cabi/data/2016-Q3-Trips-History-Data-1.csv");
+  setDatasource("/Users/michael/mvjantzen.com/cabi/data/2016-Q3-Trips-History-Data-2.csv");
+  //setDatasource("/Users/michael/mvjantzen.com/cabi/data/REIweekend.csv");
   // String csvFile, int outStation, int inStation, int outTime, int inTime, int reg, int idNo
   dataTitle = "Bike W21852 in 2015"; 
   dataTitle = "All trips in 2015"; 
   dataTitle = "Jan - Sep, 2016";
   println("Date range: " + minDate.getTime() + " to " + maxDate.getTime());
-  //getStats();
-  //if (2==4/0) 
+  getStats();
+  if (2==4/0) 
   size(swidth, sheight, JAVA2D);
   println("=============================");
   if (displayMethod == SWEEP) {
