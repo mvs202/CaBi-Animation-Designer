@@ -1,6 +1,6 @@
 // Data Animation Generator, v2
 // Written by Michael Schade, (c)2013 
-import java.util.*;  
+import java.util.*;
 import java.text.SimpleDateFormat;
 // station data from http://mvjantzen.com/cabi/cabixmlbuild.php stored in data/cabi.csv
 // add White House manually: 38.896494, -77.038947, 31210 
@@ -114,11 +114,11 @@ public class CaBiBike {
     }
   }
 
-public class CaBiTrip { 
+public class CaBiTrip {
   // object for each row in the trip-history open data
   public int bikeoutStation;  // an index to the array which have info for each station
   public int bikeinStation;
-  public int bikeoutTime; 
+  public int bikeoutTime;
   public int bikeinTime;
   public String bikeNo;
   public String memberZip;
@@ -497,17 +497,7 @@ void drawStations(int f) {
       } 
     maxBusiest = max(maxBusiest, busiestStation);
     }
-  }   
-  
-Boolean EastoftheRiver(String s) {
-  int x = parseInt(s);
-  return (x >= 31700 && x <= 31807);
-  }
-
-Boolean isCrystalCity(String s) {
-  int x = parseInt(s);
-  return (x >= 31000 && x <= 31003) || x == 31007 || (x >= 31009 && x <= 31013) || x == 31052;
-  }
+  }  
 
 Boolean isGreaterCrystalCity(String s) {
   int x = parseInt(s);
@@ -719,7 +709,8 @@ void getStats() {
   int toAlex = 0;
   int toDC = 0;
   int toMD = 0;
-  int fromSelection = 0;
+  int toFair = 0;
+  int crossedBorder = 0;
   int[] maleTripsPerStation = new int[cabiStations.length];
   int[] femaleTripsPerStation = new int[cabiStations.length];
   int[] cat0castripsPerStation = new int[cabiStations.length];
@@ -734,12 +725,16 @@ void getStats() {
   int[] tripsPerStation = new int[cabiStations.length];
   int[] tripsToFromLincolnMemorial = new int[cabiStations.length];
   String[] stringTrips = new String[cabiStations.length];
+  String[] stringTrips2D = new String[cabiStations.length*cabiStations.length];
   int[] casualTripsPerStation = new int[cabiStations.length];
+  int[][] originDestinationCounts = new int[cabiStations.length][cabiStations.length];
+  int[][] originDestination30minCounts = new int[cabiStations.length][cabiStations.length];
   int totalTrips = 0;
   int totalCasualTrips = 0;
   int LincolnToJefferson = 0;
   int JeffersonToLincoln = 0;
   Calendar calendar;
+  final int thirtyMin = 30*60*1000;
   for (int i = 0; i < tripsPerDayOfYear.length; i++) {
     tripsPerDayOfYear[i] = 0;
     }
@@ -750,6 +745,10 @@ void getStats() {
     tripsPerWeekOfYear[i] = 0; 
     }
   for (int i = 0; i < tripsPerStation.length; i++) {
+    for (int j = 0; j < originDestinationCounts.length; j++) {
+      originDestinationCounts[i][j] = 0;
+      originDestination30minCounts[i][j] = 0;
+      }
     tripsPerStation[i] = 0;
     casualTripsPerStation[i] = 0;
     tripsToFromLincolnMemorial[i] = 0;
@@ -765,6 +764,10 @@ void getStats() {
   println(validTrips.size() + " trips...");
   for (int t = 0; t < validTrips.size(); t++) {  
     trip = validTrips.get(t); 
+    originDestinationCounts[trip.bikeoutStation][trip.bikeinStation]++;
+    if (trip.bikeinDayTime.getTimeInMillis() - trip.bikeoutDayTime.getTimeInMillis() > thirtyMin) {
+      originDestination30minCounts[trip.bikeoutStation][trip.bikeinStation]++;
+      }
     if (!zipCounts.containsKey(trip.memberZip)) {
       zipCounts.put(trip.memberZip, 1);
       } 
@@ -825,13 +828,15 @@ void getStats() {
     
     if (cabiStations[trip.bikeoutStation].id.equals("31258") && cabiStations[trip.bikeinStation].id.equals("31249")) {LincolnToJefferson++;}
     if (cabiStations[trip.bikeoutStation].id.equals("31249") && cabiStations[trip.bikeinStation].id.equals("31258")) {JeffersonToLincoln++;}
-    if (isGreaterCrystalCity(cabiStations[trip.bikeoutStation].id)) {
-      if (isGreaterCrystalCity(cabiStations[trip.bikeinStation].id)) toCC++;
-      else if (cabiStations[trip.bikeinStation].jurisdiction.equals("DC"))         toDC++; 
-      else if (cabiStations[trip.bikeinStation].jurisdiction.equals("Arlington"))  toArl++;
-      else if (cabiStations[trip.bikeinStation].jurisdiction.equals("Alexandria")) toAlex++;
-      else if (cabiStations[trip.bikeinStation].jurisdiction.equals("Montgomery")) toMD++;
-      fromSelection++;
+    //if (trip.isRegistered) {
+    if      (cabiStations[trip.bikeinStation].jurisdiction.equals("DC"))         toDC++; 
+    else if (cabiStations[trip.bikeinStation].jurisdiction.equals("Arlington"))  toArl++;
+    else if (cabiStations[trip.bikeinStation].jurisdiction.equals("Alexandria")) toAlex++;
+    else if (cabiStations[trip.bikeinStation].jurisdiction.equals("Montgomery")) toMD++; 
+    else if (cabiStations[trip.bikeinStation].jurisdiction.equals("Fairfax"))    toFair++;
+    //}
+    if (!cabiStations[trip.bikeinStation].jurisdiction.equals(cabiStations[trip.bikeoutStation].jurisdiction)) {
+      crossedBorder++;
       }
     if (!trip.isRegistered) {
       casualTripsPerStation[trip.bikeoutStation]++;
@@ -846,20 +851,33 @@ void getStats() {
     }
   for (int i = 0; i < femaleTripsPerStation.length; i++) {
     if (femaleTripsPerStation[i] + maleTripsPerStation[i] > 9)
-    stringTrips[i] = String.format("%7d", 100*femaleTripsPerStation[i]/(femaleTripsPerStation[i] + maleTripsPerStation[i])) + ":=: " + cabiStations[i].name + "; " + femaleTripsPerStation[i] + " Fs " + maleTripsPerStation[i] + " Ms";
-   else stringTrips[i] = "";
+      stringTrips[i] = String.format("%7d", 100*femaleTripsPerStation[i]/(femaleTripsPerStation[i] + maleTripsPerStation[i])) + ":=: " + cabiStations[i].name + "; " + femaleTripsPerStation[i] + " Fs " + maleTripsPerStation[i] + " Ms";
+    else stringTrips[i] = "";
     }
-  println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"); 
+  println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+  for (int i = 0; i < originDestinationCounts.length; i++) {
+    for (int j = 0; j < originDestinationCounts.length; j++) {
+      String lateness;
+      if (originDestinationCounts[i][j] == 0) {lateness = "";}
+      else {
+        float percent = (float)originDestination30minCounts[i][j]/originDestinationCounts[i][j];
+        lateness = " (" + percent + " > 30min)";
+        }
+      stringTrips2D[i*originDestinationCounts.length + j] = String.format("%7d", originDestinationCounts[i][j]) + ": " + 
+        cabiStations[i].name + " to " + cabiStations[j].name + lateness;
+      }
+    } 
+  Arrays.sort(stringTrips2D);
+  for (int i = stringTrips2D.length - 1; i >= stringTrips2D.length - 400; i--) {
+    println(stringTrips2D[i]);
+    }
+  println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
   println("trips (from) per Month of year:"); 
   for (int i = 0; i < tripsPerMonth.length; i++) {
     Calendar working = GregorianCalendar.getInstance();
     working.set(2016, i, 1);   
     println(String.format("%07d", tripsPerMonth[i]) + ": " + format1.format(working.getTime()));
-    }
-  Arrays.sort(stringTrips);
-  for (int i = stringTrips.length - 1; i >= 0; i--) {
-    //println(stringTrips[i]);
-    }
+    } 
   println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"); 
   println("trips (from) per day of year:"); 
   for (int i = 0; i < tripsPerDayOfYear.length; i++) {
@@ -897,7 +915,7 @@ void getStats() {
     }
   Arrays.sort(stringTrips);
   for (int i = stringTrips.length - 1; i >= 0; i--) {
-    println(stringTrips[i]);
+    //println(stringTrips[i]);
     }
   int total = 0;
   /*
@@ -921,12 +939,13 @@ void getStats() {
   println("***********************************");
   println(LincolnToJefferson + " LincolnToJefferson");
   println(JeffersonToLincoln + " JeffersonToLincoln");
-  println(toCC + " toCC (" + (float)toCC/fromSelection + ")");
-  println(toArl + " toArl (" + (float)toArl/fromSelection + ")");
-  println(toAlex + " toAlex (" + (float)toAlex/fromSelection + ")");
-  println(toDC + " toDC (" + (float)toDC/fromSelection + ")");
-  println(toMD + " toMD (" + (float)toMD/fromSelection + ")");
-  println(fromSelection + " total");
+  println(toDC + " trips to DC (" + (float)toDC/validTrips.size() + ")");
+  println(toArl + " trips to Arlington (" + (float)toArl/validTrips.size() + ")");
+  println(toAlex + " trips to Alexandria (" + (float)toAlex/validTrips.size() + ")");
+  println(toMD + " trips to Montgomery County (" + (float)toMD/validTrips.size() + ")");
+  println(toFair + " trips to Fairfax (" + (float)toFair/validTrips.size() + ")");
+  println(validTrips.size() + " total");
+  println(crossedBorder + " trips crossed a border (" + (float)crossedBorder/validTrips.size() + ")");
   println("***********************************");
   println((totalTrips - totalCasualTrips) + " registered trips (" + 100.0*(totalTrips - totalCasualTrips)/totalTrips + "%)");
   println(totalCasualTrips + " casual trips (" + 100.0*totalCasualTrips/totalTrips + "%)");
@@ -935,7 +954,7 @@ void getStats() {
   for (String string : zipCounts.keySet()) {
     //println(zipCounts.get(string) + " :: " + string);
     }
-  getBusyBikeStats();
+  //getBusyBikeStats();
   }
   
 void getBusyBikeStats() {
