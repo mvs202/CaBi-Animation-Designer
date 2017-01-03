@@ -107,7 +107,7 @@ public class BikeDirections {
 public class CaBiBike {
   // a single Capital Bikeshare bike
   public String bikeID;
-  int trips;
+  public int trips;
   public CaBiBike(String ID) {
     bikeID = ID;
     trips = 1;
@@ -193,7 +193,7 @@ public class CaBiTrip {
           }
           */
         bikeDirections = null;
-        println("no directions for " + bikeout + " to " + bikein);
+        //println("no directions for " + bikeout + " to " + bikein);
         }
       }
     isRegistered = !(membership.equals("Casual") || membership.equals("24-hour") || membership.equals("3-Day"));
@@ -214,7 +214,7 @@ public class CaBiTrip {
       else                                                                             {category = 0;} 
       }
     else if (rideTypes == BIKENO) { 
-      if (bikeNo.equals("W22062")) {category = 0;}
+      if (bikeNo.equals("W21828")) {category = 0;}
       else                         {category = 1;} 
       }
     else if (rideTypes == TRIPDAY) {  // check start day
@@ -709,7 +709,7 @@ void getStats() {
   int toAlex = 0;
   int toDC = 0;
   int toMD = 0;
-  int toFair = 0;
+  int toFair = 0; 
   int crossedBorder = 0;
   int[] maleTripsPerStation = new int[cabiStations.length];
   int[] femaleTripsPerStation = new int[cabiStations.length];
@@ -763,15 +763,18 @@ void getStats() {
     }
   println(validTrips.size() + " trips...");
   for (int t = 0; t < validTrips.size(); t++) {  
-    trip = validTrips.get(t); 
+    trip = validTrips.get(t);
+    int bikeoutDayOfYear = trip.bikeoutDayTime.get(Calendar.DAY_OF_YEAR);  // Jan 1 = 1, not 0
+    int bikeinDayOfYear = trip.bikeinDayTime.get(Calendar.DAY_OF_YEAR);
+    int dayOfWeek = trip.bikeoutDayTime.get(Calendar.DAY_OF_WEEK);
     originDestinationCounts[trip.bikeoutStation][trip.bikeinStation]++;
     if (trip.bikeinDayTime.getTimeInMillis() - trip.bikeoutDayTime.getTimeInMillis() > thirtyMin) {
       originDestination30minCounts[trip.bikeoutStation][trip.bikeinStation]++;
       }
     if (!zipCounts.containsKey(trip.memberZip)) {
       zipCounts.put(trip.memberZip, 1);
-      } 
-    else { 
+      }
+    else {
       zipCounts.put(trip.memberZip, zipCounts.get(trip.memberZip) + 1);
       }
     if (trip.gender == 'M') {
@@ -783,10 +786,7 @@ void getStats() {
       femaleTripsPerStation[trip.bikeoutStation]++;
       }
     //if (t % 10000 == 0) println(format1.format(trip.bikeoutDayTime.getTime()) + " --- " + trip.bikeoutDayTime.get(Calendar.DAY_OF_YEAR));
-    int bikeoutDayOfYear = trip.bikeoutDayTime.get(Calendar.DAY_OF_YEAR);  // Jan 1 = 1, not 0
-    int bikeinDayOfYear = trip.bikeinDayTime.get(Calendar.DAY_OF_YEAR);
-    int dayOfWeek = trip.bikeoutDayTime.get(Calendar.DAY_OF_WEEK);
-    if (dayOfWeek == Calendar.SATURDAY || dayOfWeek == Calendar.SUNDAY || true) {
+    if (dayOfWeek == Calendar.SATURDAY || dayOfWeek == Calendar.SUNDAY) {
       if (trip.isRegistered) {
         regWeekendTripsPerStation[trip.bikeinStation]++;
         regWeekendTripsPerStation[trip.bikeoutStation]++;
@@ -834,43 +834,44 @@ void getStats() {
     else if (cabiStations[trip.bikeinStation].jurisdiction.equals("Alexandria")) toAlex++;
     else if (cabiStations[trip.bikeinStation].jurisdiction.equals("Montgomery")) toMD++; 
     else if (cabiStations[trip.bikeinStation].jurisdiction.equals("Fairfax"))    toFair++;
-    //}
     if (!cabiStations[trip.bikeinStation].jurisdiction.equals(cabiStations[trip.bikeoutStation].jurisdiction)) {
       crossedBorder++;
       }
+    //}
     if (!trip.isRegistered) {
       casualTripsPerStation[trip.bikeoutStation]++;
       casualTripsPerStation[trip.bikeinStation]++;
-      }
+      } 
     tripsPerStation[trip.bikeinStation]++;
-    tripsPerStation[trip.bikeoutStation]++;
-    }
-  println("all weekend trips per station:");
-  for (int i = 0; i < tripsPerStation.length; i++) {
-    stringTrips[i] = String.format("%7d", casWeekendTripsPerStation[i] + regWeekendTripsPerStation[i]) + "," + casWeekendTripsPerStation[i] + "," + regWeekendTripsPerStation[i] + "," + cabiStations[i].name; 
-    }
-  for (int i = 0; i < femaleTripsPerStation.length; i++) {
-    if (femaleTripsPerStation[i] + maleTripsPerStation[i] > 9)
-      stringTrips[i] = String.format("%7d", 100*femaleTripsPerStation[i]/(femaleTripsPerStation[i] + maleTripsPerStation[i])) + ":=: " + cabiStations[i].name + "; " + femaleTripsPerStation[i] + " Fs " + maleTripsPerStation[i] + " Ms";
-    else stringTrips[i] = "";
+    tripsPerStation[trip.bikeoutStation]++; 
     }
   println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+  println("all weekend trips per station:");
+  for (int i = 0; i < tripsPerStation.length; i++) {
+    stringTrips[i] = String.format("%7d", casWeekendTripsPerStation[i] + regWeekendTripsPerStation[i]) + "," + cabiStations[i].name; 
+    }
+  Arrays.sort(stringTrips);
+  for (int i = stringTrips.length - 1; i >= 0; i--) {
+    //println(stringTrips[i]);
+    }
+  println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+  println("Most popular trips (origin-to-destination):");
   for (int i = 0; i < originDestinationCounts.length; i++) {
     for (int j = 0; j < originDestinationCounts.length; j++) {
       String lateness;
       if (originDestinationCounts[i][j] == 0) {lateness = "";}
       else {
         float percent = (float)originDestination30minCounts[i][j]/originDestinationCounts[i][j];
-        lateness = " (" + percent + " > 30min)";
+        lateness = " (" + percent + " > 30min)"; 
         }
-      stringTrips2D[i*originDestinationCounts.length + j] = String.format("%7d", originDestinationCounts[i][j]) + ": " + 
+      stringTrips2D[i*originDestinationCounts.length + j] = String.format("%7d", originDestination30minCounts[i][j]) + ": " + 
         cabiStations[i].name + " to " + cabiStations[j].name + lateness;
       }
     } 
   Arrays.sort(stringTrips2D);
   for (int i = stringTrips2D.length - 1; i >= stringTrips2D.length - 400; i--) {
-    println(stringTrips2D[i]);
-    }
+    //println(stringTrips2D[i]);
+    } 
   println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
   println("trips (from) per Month of year:"); 
   for (int i = 0; i < tripsPerMonth.length; i++) {
@@ -886,27 +887,6 @@ void getStats() {
     working.add(Calendar.DAY_OF_YEAR, i); 
     //println(String.format("%07d", tripsPerDayOfYear[i]) + ": " + format1.format(working.getTime()));
     }
-    /*
-  println("increase in trips per station:");
-  for (int i = 0; i < tripsPerStation.length; i++) {
-    stringTrips[i] = String.format("%7d", tripsPerStation[i]) + "," + cabiStations[i].id;
-    totalTrips += tripsPerStation[i];
-    totalCasualTrips += casualTripsPerStation[i];
-    float growth;
-    if (cat0tripsPerStation[i] == 0) {
-      growth = 0;
-      }
-    else {
-      //growth = 100.0*(float)(cat1tripsPerStation[i] - cat0tripsPerStation[i])/(float)cat0tripsPerStation[i];
-      }
-    //if (growth >= 10.0 && cat1tripsPerStation[i] >= 100)
-      //println(growth + "% " + cabiStations[i].name + " (" +cat0tripsPerStation[i] + " to " + cat1tripsPerStation[i] + ")");
-    println("{id:" + cabiStations[i].id + ",name:\"" + cabiStations[i].name + "\"," + 
-      "Mar9cas:" +cat0castripsPerStation[i] + ",Mar16cas:" + cat1castripsPerStation[i] + "," + 
-      "Mar9reg:" +cat0regtripsPerStation[i] + ",Mar16reg:" + cat1regtripsPerStation[i] + "," + 
-      "lat:" + cabiStations[i].lat + ",lng:" + cabiStations[i].lng + "},");
-    }
-  */
   println("trips (to and from) per station:");
   for (int i = 0; i < tripsPerStation.length; i++) {
     stringTrips[i] = String.format("%7d", tripsPerStation[i]) + ": " + cabiStations[i].name + " (" + cabiStations[i].jurisdiction + ")";
@@ -915,17 +895,20 @@ void getStats() {
     }
   Arrays.sort(stringTrips);
   for (int i = stringTrips.length - 1; i >= 0; i--) {
+    println(stringTrips[i]);
+    }
+  float percent = 100.0*totalCasualTrips/totalTrips;
+  println("Percentage of casual trips: " + percent + "%");
+  println("Percentage of casual trips per station:");
+  for (int i = 0; i < tripsPerStation.length; i++) {
+    if (tripsPerStation[i] == 0) {percent = -99999.0;}
+    else                         {percent = 100.0*casualTripsPerStation[i]/tripsPerStation[i];}
+    stringTrips[i] = String.format("%05.1f", percent) + "%: " + cabiStations[i].name + " (" + cabiStations[i].jurisdiction + ")";
+    }
+  Arrays.sort(stringTrips);
+  for (int i = stringTrips.length - 1; i >= 0; i--) {
     //println(stringTrips[i]);
     }
-  int total = 0;
-  /*
-  for (int i = tripsPerStation.length - 1; i >= 0; i--) {
-    String[] tokens = stringTrips[i].trim().split(",");
-    total += Integer.parseInt(tokens[0]);
-    println(tokens[1] + ":" + tokens[0] + ",");
-    println(round(1000.0*casualTripsPerStation[i]/tripsPerStation[i])/10.0 + ": " + cabiStations[i].name + " (" + tripsPerStation[i] + ")");
-    }
-    */
   int minLMtrips = tripsToFromLincolnMemorial[0];
   int maxLMtrips = tripsToFromLincolnMemorial[0];
   println("trips (to and from) Lincoln Memorial:");
@@ -939,13 +922,14 @@ void getStats() {
   println("***********************************");
   println(LincolnToJefferson + " LincolnToJefferson");
   println(JeffersonToLincoln + " JeffersonToLincoln");
-  println(toDC + " trips to DC (" + (float)toDC/validTrips.size() + ")");
-  println(toArl + " trips to Arlington (" + (float)toArl/validTrips.size() + ")");
-  println(toAlex + " trips to Alexandria (" + (float)toAlex/validTrips.size() + ")");
-  println(toMD + " trips to Montgomery County (" + (float)toMD/validTrips.size() + ")");
-  println(toFair + " trips to Fairfax (" + (float)toFair/validTrips.size() + ")");
-  println(validTrips.size() + " total");
-  println(crossedBorder + " trips crossed a border (" + (float)crossedBorder/validTrips.size() + ")");
+  int toSomewhere = toDC + toArl + toAlex + toMD + toFair;
+  println(toDC + " trips to DC (" + (float)toDC/toSomewhere + ")");
+  println(toArl + " trips to Arlington (" + (float)toArl/toSomewhere + ")");
+  println(toAlex + " trips to Alexandria (" + (float)toAlex/toSomewhere + ")");
+  println(toMD + " trips to Montgomery County (" + (float)toMD/toSomewhere + ")");
+  println(toFair + " trips to Fairfax (" + (float)toFair/toSomewhere + ")");
+  println(toSomewhere + " total");
+  println(crossedBorder + " trips crossed a border (" + (float)crossedBorder/toSomewhere + ")");
   println("***********************************");
   println((totalTrips - totalCasualTrips) + " registered trips (" + 100.0*(totalTrips - totalCasualTrips)/totalTrips + "%)");
   println(totalCasualTrips + " casual trips (" + 100.0*totalCasualTrips/totalTrips + "%)");
@@ -955,12 +939,34 @@ void getStats() {
     //println(zipCounts.get(string) + " :: " + string);
     }
   //getBusyBikeStats();
+  outputStats(tripsPerStation);
   }
   
+void outputStats(int[] tripsPerStation) {
+  PrintWriter output;
+  output = createWriter("stats.txt");
+  output.println("stations=[");
+  String separator;
+  for (int i = 0; i < cabiStations.length; i++) {
+    if (i == cabiStations.length - 1) {separator = "";}
+    else                              {separator = ",";}
+    output.println("{id:" + cabiStations[i].id +
+      ",name:\"" + cabiStations[i].name + "\"" +
+      ",lat:" + cabiStations[i].lat +
+      ",lng:" + cabiStations[i].lng +
+      ",jurisdiction:\"" + cabiStations[i].jurisdiction + "\"" +
+      ",trips:" + tripsPerStation[i] +
+      "}" + separator);
+    }
+  output.println("];");
+  output.flush();
+  output.close();
+  }
+
 void getBusyBikeStats() {
   // Calculate busy bike:
   CaBiTrip trip;
-  List<CaBiBike> bikeList = new ArrayList<CaBiBike>(2000);  // assume no more than 2000 bikes
+  List<CaBiBike> bikeList = new ArrayList<CaBiBike>(5000);  // assume no more than 5000 bikes
   for (int t = 0; t < validTrips.size(); t++) {
     trip = validTrips.get(t); 
     Boolean found = false;
@@ -971,18 +977,22 @@ void getBusyBikeStats() {
         }
       }
     if (!found) {
-      bikeList.add(new CaBiBike(trip.bikeNo));
+      bikeList.add(new CaBiBike(trip.bikeNo)); 
       }
     }
+  for (Iterator<CaBiBike> i = bikeList.iterator(); i.hasNext();) {
+    CaBiBike item = i.next(); 
+    //println(item.bikeID + "->: " + item.trips);
+    }
   String busyBike = "";
-  int busyBikeTrips = 0;
+  int busyBikeTrips = 0; 
   for (int i = 0; i < bikeList.size(); i++) { 
-    //if (!bikeList.get(i).bikeID.equals("1stplacebike")) {
+    if (!bikeList.get(i).bikeID.equals("W22092") && !bikeList.get(i).bikeID.equals("W00346") && !bikeList.get(i).bikeID.equals("W21828")) {
       if (bikeList.get(i).trips > busyBikeTrips) {
         busyBike = bikeList.get(i).bikeID;
         busyBikeTrips = bikeList.get(i).trips;
         }
-     // }
+      }
     }
   println("***********************************");
   println("busy bike is " + busyBike + ", with " + busyBikeTrips + " trips");
@@ -1023,7 +1033,7 @@ void getBusyBikeStats() {
     }
   Arrays.sort(stringTrips);
   for (int i = stringTrips.length - 1; i >= 0; i--) {
-    println(stringTrips[i]);
+    //println(stringTrips[i]);
     }
   println("***********************************");
   }
@@ -1045,7 +1055,11 @@ void setBoundary(String background, float south, float west, float north, float 
   }
 
 Boolean validStation(String name) {
-  return !name.equals("Alta Tech Office") && !name.equals("1714 Warehouse ") && !name.equals("Mo Co Warehouse");
+  return !name.equals("White House [17th & State Pl NW]") && 
+         !name.equals("Alta Tech Office") && 
+         !name.equals("1714 Warehouse ") && 
+         !name.equals("6035 Warehouse") && 
+         !name.equals("Mo Co Warehouse");
   }
 
 int findMatch(String[] haystack, String needle) {
@@ -2056,6 +2070,7 @@ void setup() {
   setDatasource("/Users/michael/mvjantzen.com/cabi/data/2016-Q2-Trips-History-Data.csv");
   setDatasource("/Users/michael/mvjantzen.com/cabi/data/2016-Q3-Trips-History-Data-1.csv");
   setDatasource("/Users/michael/mvjantzen.com/cabi/data/2016-Q3-Trips-History-Data-2.csv");
+  setDatasource("/Users/michael/mvjantzen.com/cabi/data/2016-Q4-Trips-History-Data.csv");
   //setDatasource("/Users/michael/mvjantzen.com/cabi/data/REIweekend.csv");
   // String csvFile, int outStation, int inStation, int outTime, int inTime, int reg, int idNo
   dataTitle = "Bike W21852 in 2015"; 
